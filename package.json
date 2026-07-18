@@ -1,0 +1,17 @@
+{
+  "name": "strictlyintrascendental",
+  "version": "1.0.0",
+  "description": "Self-contained TypeScript applets — a moving virtual museum for my personal site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npx tsx scripts/build.ts",
+    "build:watch": "npx tsx scripts/build.ts --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  }
+}
