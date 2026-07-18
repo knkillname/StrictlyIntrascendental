@@ -1,24 +1,9 @@
-/**
- * Bouncing Text — sample applet.
- *
- * Displays the TEXT bouncing around the canvas like a screensaver.
- * Speed and direction change on edge collisions, with a slight
- * color shift on each bounce.
- *
- * Includes resize handling so the canvas adapts to its container.
- * Requires no external dependencies.
- */
-
-const TEXT = "TECH DEBT";  // Let's bring this to the front and center, shall we?
+const TEXT = "TECH DEBT";
 const BASE_SPEED = 3;
 
 type HSL = { h: number; s: number; l: number };
 
 let hue = 0;
-
-function randomHue(): number {
-  return Math.random() * 360;
-}
 
 function hslStr(h: number, s: number, l: number): string {
   return `hsl(${h}, ${s}%, ${l}%)`;
@@ -39,7 +24,6 @@ function getTextDimensions(
 export default function init(canvas: HTMLCanvasElement): void {
   const ctx = canvas.getContext("2d")!;
 
-  // --- State ---
   let x: number;
   let y: number;
   let vx: number;
@@ -59,7 +43,7 @@ export default function init(canvas: HTMLCanvasElement): void {
     vx = Math.cos(angle) * BASE_SPEED;
     vy = Math.sin(angle) * BASE_SPEED;
 
-    hue = randomHue();
+    hue = Math.random() * 360;
     color = { h: hue, s: 80, l: 60 };
   }
 
@@ -78,8 +62,6 @@ export default function init(canvas: HTMLCanvasElement): void {
     hue = (hue + 30 + Math.random() * 60) % 360;
     color = { h: hue, s: 80, l: 60 };
   }
-
-  let animationId = 0;
 
   function tick(): void {
     resize();
@@ -137,18 +119,13 @@ export default function init(canvas: HTMLCanvasElement): void {
     ctx.textBaseline = "middle";
     ctx.fillText(TEXT, x, y);
 
-    animationId = requestAnimationFrame(tick);
+    requestAnimationFrame(tick);
   }
 
-  // Initialize dimensions and position
   resize();
   const w = canvas.width;
   const h = canvas.height;
   reset(w, h);
 
-  // Start loop
-  animationId = requestAnimationFrame(tick);
-
-  // Cleanup (for hot-reload if init is re-executed)
-  // Not needed since it's always a fresh HTML
+  requestAnimationFrame(tick);
 }

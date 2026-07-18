@@ -1,11 +1,4 @@
-/**
- * Build script: compiles each TypeScript applet into a self-contained HTML.
- *
- * Reads applets/<name>/main.ts, bundles it with esbuild (IIFE),
- * and outputs dist/<name>.html with the JS inlined,
- * ready to copy-paste into Google Sites ("Embed code").
- */
-
+// Compiles each applets/<name>/main.ts → dist/<name>.html (IIFE, self-contained).
 import * as esbuild from "esbuild";
 import { readdirSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import { join, dirname } from "path";

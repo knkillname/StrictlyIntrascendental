@@ -1,16 +1,2 @@
-/**
- * Shared types for all applets.
- *
- * Each applet exposes an `init` function as its default export,
- * which receives the `<canvas>` from the generated HTML and starts the animation.
- *
- * @example
- * ```ts
- * export default function init(canvas: HTMLCanvasElement): void {
- *   // start animation…
- * }
- * ```
- */
-
-/** Signature that every applet must export by default. */
+// Shared signature for all applet entry points: receives the <canvas>, starts the animation loop.
 export type AppletInit = (canvas: HTMLCanvasElement) => void;

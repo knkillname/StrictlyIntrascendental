@@ -82,6 +82,15 @@ export default init;
 7. **No template literals** in the build script (`scripts/build.ts`) for
    constructing HTML. Use concatenation with `+` to avoid parsing
    conflicts with `${}` and backticks.
+8. **Minimal instruction count** — fewer instructions is always better.
+   Eliminate redundant branches, collapse equivalent expressions, and
+   prefer direct computation over ceremony.
+9. **Comments must be inlined and short** — only to translate a complex
+   idea into simple language. Banner comments (multi-line blocks at the
+   top of a file or section separators like `// ----`) are prohibited.
+10. **Elegance is mandatory** — code must read like prose. Prefer
+    `for…of` over indexed loops, destructure where it improves clarity,
+    and keep each function focused on a single responsibility.
 
 ### Canvas: best practices
 
