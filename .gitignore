@@ -141,3 +141,16 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Python / Pipenv
+.mypy_cache/
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# For this project specifically we don't need to track the package-lock.json
+# as all the applets are by design self-contained and do not require any
+# external dependencies.
+package-lock.json
