@@ -104,6 +104,15 @@ export default init;
 - For shadows/glow, use `ctx.shadowColor` + `ctx.shadowBlur` (they are
   cheap and do not require filters).
 
+## Color palette
+
+- **Background**: `#090e13` — very dark blue-grey, used as the HTML/CSS
+  `background` and for `ctx.clearRect` fallback.
+- **Primary**: `#f9f9f9` — near-white, used for all main text, particle
+  cores, and primary foreground elements.
+- Accent colors (HSL with varied hue) are reserved for glow, shadows,
+  and secondary decorative elements.
+
 ## Build process
 
 The `scripts/build.ts` script:
