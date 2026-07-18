@@ -110,11 +110,11 @@ export default function init(canvas: HTMLCanvasElement): void {
     // Draw
     ctx.clearRect(0, 0, w, h);
 
-    // Subtle shadow
+    // Colored glow behind the text
     ctx.shadowColor = hslStr(color.h, color.s, color.l);
     ctx.shadowBlur = 20;
 
-    ctx.fillStyle = hslStr(color.h, color.s, color.l);
+    ctx.fillStyle = "#f9f9f9";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(TEXT, x, y);

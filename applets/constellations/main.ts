@@ -117,7 +117,7 @@ export default function init(canvas: HTMLCanvasElement): void {
         ctx.fill();
         ctx.beginPath();
         ctx.arc(p.x, p.y, r * 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255, 255, 255, " + Math.min(1, alpha * 1.4) + ")";
+        ctx.fillStyle = "rgba(249, 249, 249, " + Math.min(1, alpha * 1.4) + ")";
         ctx.fill();
     }
 
