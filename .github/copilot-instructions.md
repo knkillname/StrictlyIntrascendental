@@ -46,6 +46,9 @@ export default init;
 - It must not assume anything about the canvas size; it should use
   `canvas.clientWidth / clientHeight` and resize the buffer with
   `canvas.width = canvas.clientWidth` (and analogously for height).
+- On resize, only update `canvas.width`/`canvas.height` to match
+  `clientWidth`/`clientHeight`. Do not reinitialize animation state
+  unless the applet explicitly requires it.
 
 ### No external dependencies
 
@@ -53,8 +56,9 @@ export default init;
   self-contained. esbuild inlines the code, but if there are external
   dependencies they get bundled in.
 - Always prefer plain Canvas API. Do not use Three.js, PixiJS, D3, etc.
-- If a small library is absolutely necessary, evaluate whether it can be
-  included as an inline snippet in `main.ts` itself.
+- If a utility under ~50 lines is strictly required and has no npm
+  equivalent, paste it directly into `main.ts` with a `// SOURCE:`
+  comment. Do not add npm dependencies under any circumstance.
 
 ### Animations
 
@@ -67,30 +71,54 @@ export default init;
 
 ## TypeScript style
 
-### Mandatory rules
+### Mandatory rules — ordered by importance
 
-1. **strict mode enabled** (`tsconfig.json` already has it).
-2. **No `any`** — use concrete types. If a generic type is needed,
+*These three principles are non-negotiable and override any other rule:*
+
+1. **Functional programming** — no classes, no `this`, no mutation.
+   Pure functions are the default: same input → same output, zero side
+   effects. The animation loop (`init`) is the sole exception — it is
+   the impure boundary where canvas drawing, `requestAnimationFrame`,
+   and resize handling live. Keep all logic, state transitions, and
+   rendering computations in pure functions; let `init` wire them.
+   Compose small functions with `pipe`/`compose` or direct chaining.
+   Use `map`, `filter`, `reduce`, `flatMap`; avoid imperative loops.
+   State flows through function arguments and return values only.
+   Prefer `const`; if you must rebind, use `let` scoped tightly.
+   Data structures are immutable — `readonly` arrays, `Readonly<T>`,
+   spread (`[...arr, item]`) instead of `push`.
+   When Rules 1, 2, and 3 conflict, Rule 1 takes precedence,
+   then Rule 2, then Rule 3. Never sacrifice immutability for brevity.
+
+2. **Minimal instruction count** — the supreme metric. Fewer
+   instructions is always, always better. Eliminate every redundant
+   branch, collapse equivalent expressions into one, prefer direct
+   computation over ceremony. If a function can be a one-liner, make
+   it a one-liner. No dead code, no unused variables, no noise.
+
+3. **Elegance is mandatory** — code must read like prose. Every line
+   must justify its existence. Destructure where it improves clarity,
+   and keep each function focused on a single responsibility. A reader
+   should understand the intent in one pass, without deciphering.
+
+*The remaining rules support the three above:*
+
+4. **strict mode enabled** (`tsconfig.json` already has it).
+5. **No `any`** — use concrete types. If a generic type is needed,
    use `unknown` and narrow with guards.
-3. **No `typing.Protocol`** — prefer `ABCMeta` for formal
-   interfaces. For lightweight data structures, use types
-   (`type` or `interface`) directly.
-4. **No `console.log` in production code** — if debugging is needed,
+6. **Prefer `type` for data shapes**; use `interface` only when
+   declaration merging is needed. Avoid abstract classes and OOP
+   hierarchy patterns — model behavior with plain functions.
+7. **No `console.log` in production code** — if debugging is needed,
    add `// DEBUG:` comments and remove them before the build.
-5. **Variables and functions**: `camelCase`. Global constants: `UPPER_CASE`.
-6. **Export only what is necessary** — each `main.ts` exports only `default`.
-7. **No template literals** in the build script (`scripts/build.ts`) for
-   constructing HTML. Use concatenation with `+` to avoid parsing
-   conflicts with `${}` and backticks.
-8. **Minimal instruction count** — fewer instructions is always better.
-   Eliminate redundant branches, collapse equivalent expressions, and
-   prefer direct computation over ceremony.
-9. **Comments must be inlined and short** — only to translate a complex
-   idea into simple language. Banner comments (multi-line blocks at the
-   top of a file or section separators like `// ----`) are prohibited.
-10. **Elegance is mandatory** — code must read like prose. Prefer
-    `for…of` over indexed loops, destructure where it improves clarity,
-    and keep each function focused on a single responsibility.
+8. **Variables and functions**: `camelCase`. Global constants: `UPPER_CASE`.
+9. **Export only what is necessary** — each `main.ts` exports only `default`.
+10. **No template literals** in the build script (`scripts/build.ts`) for
+    constructing HTML. Use concatenation with `+` to avoid parsing
+    conflicts with `${}` and backticks.
+11. **Comments must be inlined and short** — only to translate a complex
+    idea into simple language. Banner comments (multi-line blocks at the
+    top of a file or section separators like `// ----`) are prohibited.
 
 ### Canvas: best practices
 

@@ -6,6 +6,7 @@ import { setupQwerty } from "./qwerty-input.js";
 import { buildControls } from "./controls-ui.js";
 import { setupADSRDisplay } from "./adsr-display.js";
 import type { ADSRDisplayAPI } from "./adsr-display.js";
+import { setupLFODisplay } from "./lfo-display.js";
 
 const CSS = [
     "* { box-sizing: border-box; margin: 0; padding: 0; }",
@@ -54,6 +55,9 @@ const init: AppletInit = (canvas: HTMLCanvasElement) => {
     const store = new SynthStore();
 
     buildControls(container, store);
+
+    const lfoCanvas = document.getElementById("lfo-canvas") as HTMLCanvasElement;
+    if (lfoCanvas) setupLFODisplay(lfoCanvas, store);
 
     const adsrCanvasContainer = document.getElementById("adsr-canvas-container")!;
     adsrCanvasContainer.appendChild(canvas);
