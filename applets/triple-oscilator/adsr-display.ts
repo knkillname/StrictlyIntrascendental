@@ -40,8 +40,11 @@ export function setupADSRDisplay(
         const pad = 10;
         const gw = w - pad * 2;
         const gh = h - pad * 2;
-        const total = adsr.attack + adsr.decay + adsr.sustainTime + adsr.release;
-        if (total <= 0) return;
+        // Use a floor so the envelope always spans at least 1 ms visually.
+        const total = Math.max(
+            adsr.attack + adsr.decay + adsr.sustainTime + adsr.release,
+            0.001,
+        );
 
         ctx.clearRect(0, 0, w, h);
 
@@ -70,8 +73,10 @@ export function setupADSRDisplay(
         const pad = 10;
         const gw = w - pad * 2;
         const gh = h - pad * 2;
-        const total = adsr.attack + adsr.decay + adsr.sustainTime + adsr.release;
-        if (total <= 0) return null;
+        const total = Math.max(
+            adsr.attack + adsr.decay + adsr.sustainTime + adsr.release,
+            0.001,
+        );
 
         if (!note.released) {
             const elapsed = (now - note.startMs) / 1000;
@@ -93,10 +98,10 @@ export function setupADSRDisplay(
 
     function drawCursor(x: number, y: number): void {
         ctx.beginPath();
-        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+        ctx.arc(x, y, 3, 0, 2 * Math.PI);
         ctx.fillStyle = "#f9f9f9";
         ctx.shadowColor = "#f9f9f9";
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 3;
         ctx.fill();
         ctx.shadowBlur = 0;
     }
