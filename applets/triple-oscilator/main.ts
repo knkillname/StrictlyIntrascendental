@@ -59,8 +59,9 @@ const init: AppletInit = (canvas: HTMLCanvasElement) => {
     adsrCanvasContainer.appendChild(canvas);
     const adsrDisplay: ADSRDisplayAPI = setupADSRDisplay(canvas, store);
 
-    const mouseVoices = new Map<number, Voice>();
-    const keyboardVoices = new Map<string, Voice>();
+    interface ActiveNote { voice: Voice; noteId: number; }
+    const mouseVoices = new Map<number, ActiveNote>();
+    const keyboardVoices = new Map<string, ActiveNote>();
 
     function startVoice(midi: number, velocity = 1): Voice {
         audio.ensureContext();
@@ -73,23 +74,23 @@ const init: AppletInit = (canvas: HTMLCanvasElement) => {
     }
 
     store.onChange((params) => {
-        for (const v of mouseVoices.values()) v.updateParams(params);
-        for (const v of keyboardVoices.values()) v.updateParams(params);
+        for (const n of mouseVoices.values()) n.voice.updateParams(params);
+        for (const n of keyboardVoices.values()) n.voice.updateParams(params);
     });
 
     const keyboard = new Keyboard(container, {
         onNoteOn(pointerId, _midi, _element, velocity) {
             const voice = startVoice(_midi, velocity);
-            mouseVoices.set(pointerId, voice);
-            adsrDisplay.noteOn();
+            const noteId = adsrDisplay.noteOn();
+            mouseVoices.set(pointerId, { voice, noteId });
         },
         onNoteOff(pointerId, _midi, _element) {
-            const voice = mouseVoices.get(pointerId);
-            if (voice) {
-                stopVoice(voice);
+            const note = mouseVoices.get(pointerId);
+            if (note) {
+                stopVoice(note.voice);
+                adsrDisplay.noteOff(note.noteId);
                 mouseVoices.delete(pointerId);
             }
-            adsrDisplay.noteOff();
         },
     });
 
@@ -109,16 +110,16 @@ const init: AppletInit = (canvas: HTMLCanvasElement) => {
                 status.style.display = "none";
             }
             const voice = startVoice(midi, 0.8);
-            keyboardVoices.set(code, voice);
-            adsrDisplay.noteOn();
+            const noteId = adsrDisplay.noteOn();
+            keyboardVoices.set(code, { voice, noteId });
         },
         onNoteOff(code, _midi) {
-            const voice = keyboardVoices.get(code);
-            if (voice) {
-                stopVoice(voice);
+            const note = keyboardVoices.get(code);
+            if (note) {
+                stopVoice(note.voice);
+                adsrDisplay.noteOff(note.noteId);
                 keyboardVoices.delete(code);
             }
-            adsrDisplay.noteOff();
         },
     });
 };
