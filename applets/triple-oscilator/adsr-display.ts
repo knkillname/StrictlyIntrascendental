@@ -15,14 +15,11 @@ export function setupADSRDisplay(
     let w = 0;
     let h = 0;
 
-    interface NoteState {
-        startMs: number;
-        released: boolean;
-        releaseMs: number;
-        releaseGain: number;
-    }
-
-    let noteState: NoteState | null = null;
+    let activeCount = 0;
+    let startMs = 0;
+    let released = false;
+    let releaseMs = 0;
+    let releaseGain = 0;
     let animating = false;
 
     function resize(): void {
@@ -85,7 +82,7 @@ export function setupADSRDisplay(
     }
 
     function tick(): void {
-        if (!noteState) { animating = false; return; }
+        if (activeCount === 0 && !released) { animating = false; return; }
         const adsr = store.params.adsr;
         const total = adsr.attack + adsr.decay + adsr.sustainTime + adsr.release;
         if (total <= 0) { animating = false; return; }
@@ -93,10 +90,9 @@ export function setupADSRDisplay(
         const now = performance.now();
         drawEnvelope(adsr);
 
-        if (!noteState.released) {
-            const elapsed = (now - noteState.startMs) / 1000;
+        if (!released) {
+            const elapsed = (now - startMs) / 1000;
             if (elapsed >= total) {
-                noteState = null;
                 animating = false;
                 return;
             }
@@ -104,13 +100,13 @@ export function setupADSRDisplay(
             drawCursor(elapsed, gain, adsr);
             requestAnimationFrame(tick);
         } else {
-            const re = (now - noteState.releaseMs) / 1000;
+            const re = (now - releaseMs) / 1000;
             if (re >= adsr.release) {
-                noteState = null;
+                released = false;
                 animating = false;
                 return;
             }
-            const gain = noteState.releaseGain * (1 - re / (adsr.release || 0.001));
+            const gain = releaseGain * (1 - re / (adsr.release || 0.001));
             const releaseStart = adsr.attack + adsr.decay + adsr.sustainTime;
             const elapsed = releaseStart + Math.min(re, adsr.release);
             drawCursor(elapsed, Math.max(0, gain), adsr);
@@ -120,8 +116,7 @@ export function setupADSRDisplay(
 
     store.onChange((params) => {
         drawEnvelope(params.adsr);
-        if (noteState) {
-            // Cursor will catch up on next tick
+        if (activeCount > 0 || released) {
             if (!animating) { animating = true; requestAnimationFrame(tick); }
         }
     });
@@ -130,21 +125,24 @@ export function setupADSRDisplay(
 
     return {
         noteOn(): void {
-            noteState = {
-                startMs: performance.now(),
-                released: false,
-                releaseMs: 0,
-                releaseGain: 0,
-            };
+            activeCount++;
+            if (activeCount === 1) {
+                startMs = performance.now();
+                released = false;
+            }
             if (!animating) { animating = true; requestAnimationFrame(tick); }
         },
         noteOff(): void {
-            if (!noteState || noteState.released) return;
-            const now = performance.now();
-            const elapsed = (now - noteState.startMs) / 1000;
-            noteState.released = true;
-            noteState.releaseMs = now;
-            noteState.releaseGain = envelopeGainAt(elapsed, store.params.adsr);
+            if (activeCount <= 0) return;
+            activeCount--;
+            if (activeCount === 0) {
+                const now = performance.now();
+                const elapsed = (now - startMs) / 1000;
+                released = true;
+                releaseMs = now;
+                releaseGain = envelopeGainAt(elapsed, store.params.adsr);
+                if (!animating) { animating = true; requestAnimationFrame(tick); }
+            }
         },
     };
 }
