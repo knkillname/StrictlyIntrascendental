@@ -18,7 +18,7 @@ const DEFAULTS: SynthParams = {
         rate: 5,
         depth: 0.1,
         waveform: "sine",
-        target: "vibrato",
+        target: "tremolo",
     },
 };
 
