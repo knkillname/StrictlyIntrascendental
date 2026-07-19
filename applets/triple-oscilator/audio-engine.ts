@@ -9,6 +9,7 @@ interface SourceEntry {
     gainNode: GainNode;
     isNoise: boolean;
     index: number;
+    ringGain?: GainNode;
 }
 
 export class Voice {
@@ -16,6 +17,7 @@ export class Voice {
     private envGain: GainNode;
     private ctx: AudioContext;
     private releaseSec: number;
+    private ringMod = false;
 
     constructor(
         ctx: AudioContext,
@@ -24,12 +26,16 @@ export class Voice {
         startTime: number,
         noiseBuffer: AudioBuffer,
         masterGain: GainNode,
+        velocity: number,
     ) {
         this.ctx = ctx;
         this.releaseSec = params.adsr.release;
+        this.ringMod = params.osc[2].ringMod;
         this.envGain = ctx.createGain();
         this.envGain.gain.setValueAtTime(0, startTime);
         this.envGain.connect(masterGain);
+
+        const spread = params.spread;
 
         for (let i = 0; i < 3; i++) {
             const cfg = params.osc[i];
@@ -47,13 +53,31 @@ export class Voice {
             } else {
                 const osc = ctx.createOscillator();
                 osc.type = cfg.type;
-                osc.frequency.setValueAtTime(freq, startTime);
-                osc.detune.setValueAtTime(cfg.detune, startTime);
+                const octaveFreq = freq * Math.pow(2, cfg.octave);
+                osc.frequency.setValueAtTime(octaveFreq, startTime);
+                // Spread: OSC1 goes left, OSC3 goes right, OSC2 stays centered
+                const spreadOffset = i === 0 ? -spread : i === 2 ? spread : 0;
+                osc.detune.setValueAtTime(cfg.detune + spreadOffset, startTime);
                 osc.connect(gainNode);
                 gainNode.connect(this.envGain);
                 osc.start(startTime);
                 this.sources.push({ node: osc, gainNode, isNoise: false, index: i });
             }
+        }
+
+        // Ring modulation: OSC2 modulates OSC3's amplitude
+        if (this.ringMod && this.sources.length === 3) {
+            const modSrc = this.sources[1];
+            const carSrc = this.sources[2];
+            modSrc.gainNode.disconnect();
+            carSrc.gainNode.disconnect();
+            const ringGain = ctx.createGain();
+            ringGain.gain.value = 1;
+            modSrc.gainNode.connect(ringGain.gain);
+            carSrc.gainNode.connect(ringGain);
+            ringGain.connect(this.envGain);
+            modSrc.ringGain = ringGain;
+            carSrc.ringGain = ringGain;
         }
 
         const a = params.adsr;
@@ -63,9 +87,9 @@ export class Voice {
         const gain = this.envGain.gain;
         gain.cancelScheduledValues(startTime);
         gain.setValueAtTime(0, startTime);
-        gain.linearRampToValueAtTime(1, attackEnd);
-        gain.linearRampToValueAtTime(a.sustainLevel, decayEnd);
-        gain.setValueAtTime(a.sustainLevel, sustainEnd);
+        gain.linearRampToValueAtTime(velocity, attackEnd);
+        gain.linearRampToValueAtTime(a.sustainLevel * velocity, decayEnd);
+        gain.setValueAtTime(a.sustainLevel * velocity, sustainEnd);
         gain.linearRampToValueAtTime(0, sustainEnd + a.release);
     }
 
@@ -90,12 +114,15 @@ export class Voice {
     updateParams(params: SynthParams): void {
         this.releaseSec = params.adsr.release;
         const now = this.ctx.currentTime;
+        const spread = params.spread;
         for (const s of this.sources) {
             const cfg = params.osc[s.index];
             s.gainNode.gain.value = cfg.volume;
             if (!s.isNoise) {
-                (s.node as OscillatorNode).type = cfg.type as OscillatorType;
-                (s.node as OscillatorNode).detune.setValueAtTime(cfg.detune, now);
+                const osc = s.node as OscillatorNode;
+                osc.type = cfg.type as OscillatorType;
+                const spreadOffset = s.index === 0 ? -spread : s.index === 2 ? spread : 0;
+                osc.detune.setValueAtTime(cfg.detune + spreadOffset, now);
             }
         }
     }
@@ -104,6 +131,7 @@ export class Voice {
         for (const s of this.sources) {
             s.node.disconnect();
             s.gainNode.disconnect();
+            if (s.ringGain) s.ringGain.disconnect();
         }
         this.envGain.disconnect();
     }
@@ -132,11 +160,11 @@ export class AudioEngine {
         }
     }
 
-    createVoice(freq: number, params: SynthParams, startTime: number): Voice {
+    createVoice(freq: number, params: SynthParams, startTime: number, velocity = 1): Voice {
         if (!this.ctx || !this.masterGain || !this.noiseBuffer) {
             throw new Error("AudioEngine not initialized");
         }
-        return new Voice(this.ctx, freq, params, startTime, this.noiseBuffer, this.masterGain);
+        return new Voice(this.ctx, freq, params, startTime, this.noiseBuffer, this.masterGain, velocity);
     }
 
     get currentTime(): number {

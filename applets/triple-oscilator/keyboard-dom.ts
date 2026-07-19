@@ -6,7 +6,7 @@ const WHITE_WIDTH = 100 / WHITE_KEY_COUNT;
 const BLACK_WIDTH = WHITE_WIDTH * 0.6;
 
 export interface KeyboardCallbacks {
-    onNoteOn: (pointerId: number, midi: number, element: HTMLElement) => void;
+    onNoteOn: (pointerId: number, midi: number, element: HTMLElement, velocity: number) => void;
     onNoteOff: (pointerId: number, midi: number, element: HTMLElement) => void;
 }
 
@@ -69,13 +69,16 @@ export class Keyboard {
             const key = (e.target as HTMLElement).closest(".key") as HTMLElement | null;
             if (!key) return;
             const midi = parseInt(key.dataset.midi!, 10);
+            const rect = key.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+            const velocity = 0.3 + ratio * 0.7;
             const prev = this.pointerNotes.get(e.pointerId);
             if (prev) {
                 this.cb.onNoteOff(e.pointerId, parseInt(prev.dataset.midi!, 10), prev);
             }
             this.pointerNotes.set(e.pointerId, key);
             key.classList.add("active");
-            this.cb.onNoteOn(e.pointerId, midi, key);
+            this.cb.onNoteOn(e.pointerId, midi, key, velocity);
         });
 
         this.el.addEventListener("pointermove", (e: PointerEvent) => {
@@ -91,7 +94,9 @@ export class Keyboard {
                     }
                     key.classList.add("active");
                     this.pointerNotes.set(e.pointerId, key);
-                    this.cb.onNoteOn(e.pointerId, parseInt(key.dataset.midi!, 10), key);
+                    const rect2 = key.getBoundingClientRect();
+                    const ratio2 = Math.max(0, Math.min(1, (e.clientY - rect2.top) / rect2.height));
+                    this.cb.onNoteOn(e.pointerId, parseInt(key.dataset.midi!, 10), key, 0.3 + ratio2 * 0.7);
                 }
             } else if (prev) {
                 prev.classList.remove("active");

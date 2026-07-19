@@ -1,13 +1,29 @@
 import type { ADSRConfig } from "./types.js";
+import { envelopeGainAt } from "./types.js";
 import type { SynthStore } from "./state.js";
+
+export interface ADSRDisplayAPI {
+    noteOn(): void;
+    noteOff(): void;
+}
 
 export function setupADSRDisplay(
     canvas: HTMLCanvasElement,
     store: SynthStore,
-): void {
+): ADSRDisplayAPI {
     const ctx = canvas.getContext("2d")!;
     let w = 0;
     let h = 0;
+
+    interface NoteState {
+        startMs: number;
+        released: boolean;
+        releaseMs: number;
+        releaseGain: number;
+    }
+
+    let noteState: NoteState | null = null;
+    let animating = false;
 
     function resize(): void {
         const cw = canvas.clientWidth;
@@ -20,7 +36,7 @@ export function setupADSRDisplay(
         }
     }
 
-    function draw(adsr: ADSRConfig): void {
+    function drawEnvelope(adsr: ADSRConfig): void {
         resize();
         if (w === 0 || h === 0) return;
         const pad = 10;
@@ -52,8 +68,83 @@ export function setupADSRDisplay(
         ctx.stroke();
     }
 
-    store.onChange((params) => draw(params.adsr));
+    function drawCursor(elapsed: number, gain: number, adsr: ADSRConfig): void {
+        const pad = 10;
+        const gw = w - pad * 2;
+        const gh = h - pad * 2;
+        const total = adsr.attack + adsr.decay + adsr.sustainTime + adsr.release;
+        const x = pad + (Math.min(elapsed, total) / (total || 1)) * gw;
+        const y = pad + gh - Math.max(0, Math.min(1, gain)) * gh;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = "#f9f9f9";
+        ctx.shadowColor = "#f9f9f9";
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
 
-    // Defer first draw until layout completes (canvas dimensions are 0 otherwise).
-    requestAnimationFrame(() => draw(store.params.adsr));
+    function tick(): void {
+        if (!noteState) { animating = false; return; }
+        const adsr = store.params.adsr;
+        const total = adsr.attack + adsr.decay + adsr.sustainTime + adsr.release;
+        if (total <= 0) { animating = false; return; }
+
+        const now = performance.now();
+        drawEnvelope(adsr);
+
+        if (!noteState.released) {
+            const elapsed = (now - noteState.startMs) / 1000;
+            if (elapsed >= total) {
+                noteState = null;
+                animating = false;
+                return;
+            }
+            const gain = envelopeGainAt(elapsed, adsr);
+            drawCursor(elapsed, gain, adsr);
+            requestAnimationFrame(tick);
+        } else {
+            const re = (now - noteState.releaseMs) / 1000;
+            if (re >= adsr.release) {
+                noteState = null;
+                animating = false;
+                return;
+            }
+            const gain = noteState.releaseGain * (1 - re / (adsr.release || 0.001));
+            const releaseStart = adsr.attack + adsr.decay + adsr.sustainTime;
+            const elapsed = releaseStart + Math.min(re, adsr.release);
+            drawCursor(elapsed, Math.max(0, gain), adsr);
+            requestAnimationFrame(tick);
+        }
+    }
+
+    store.onChange((params) => {
+        drawEnvelope(params.adsr);
+        if (noteState) {
+            // Cursor will catch up on next tick
+            if (!animating) { animating = true; requestAnimationFrame(tick); }
+        }
+    });
+
+    requestAnimationFrame(() => drawEnvelope(store.params.adsr));
+
+    return {
+        noteOn(): void {
+            noteState = {
+                startMs: performance.now(),
+                released: false,
+                releaseMs: 0,
+                releaseGain: 0,
+            };
+            if (!animating) { animating = true; requestAnimationFrame(tick); }
+        },
+        noteOff(): void {
+            if (!noteState || noteState.released) return;
+            const now = performance.now();
+            const elapsed = (now - noteState.startMs) / 1000;
+            noteState.released = true;
+            noteState.releaseMs = now;
+            noteState.releaseGain = envelopeGainAt(elapsed, store.params.adsr);
+        },
+    };
 }

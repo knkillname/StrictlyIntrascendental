@@ -2,9 +2,9 @@ import type { SynthParams, OscillatorConfig, ADSRConfig } from "./types.js";
 
 const DEFAULTS: SynthParams = {
     osc: [
-        { type: "square", detune: 0, volume: 0.8 },
-        { type: "triangle", detune: 10, volume: 0.6 },
-        { type: "sine", detune: -10, volume: 0.4 },
+        { type: "square", detune: 0, volume: 0.8, octave: 0, ringMod: false },
+        { type: "triangle", detune: 10, volume: 0.6, octave: 0, ringMod: false },
+        { type: "sine", detune: -10, volume: 0.4, octave: 0, ringMod: false },
     ],
     adsr: {
         attack: 0,
@@ -13,6 +13,7 @@ const DEFAULTS: SynthParams = {
         sustainTime: 1,
         release: 0.5,
     },
+    spread: 0,
 };
 
 function cloneParams(p: SynthParams): SynthParams {
@@ -23,6 +24,7 @@ function cloneParams(p: SynthParams): SynthParams {
             { ...p.osc[2] },
         ],
         adsr: { ...p.adsr },
+        spread: p.spread,
     };
 }
 
@@ -49,6 +51,11 @@ export class SynthStore {
     onChange(cb: ChangeCallback): void {
         this.listeners.add(cb);
         cb(this.params);
+    }
+
+    updateSpread(value: number): void {
+        this.params.spread = value;
+        this.notify();
     }
 
     private notify(): void {

@@ -65,6 +65,43 @@ function buildOscSection(index: number, store: SynthStore): HTMLDivElement {
     detuneRow.appendChild(detuneInput);
     section.appendChild(detuneRow);
 
+    // Octave select
+    const octaveRow = document.createElement("div");
+    octaveRow.className = "row";
+    const octaveLabel = document.createElement("label");
+    octaveLabel.textContent = "Octava";
+    octaveRow.appendChild(octaveLabel);
+    const octaveSelect = document.createElement("select");
+    for (let o = -2; o <= 2; o++) {
+        const opt = document.createElement("option");
+        opt.value = String(o);
+        opt.textContent = o > 0 ? "+" + o : String(o);
+        if (o === store.params.osc[index].octave) opt.selected = true;
+        octaveSelect.appendChild(opt);
+    }
+    octaveSelect.addEventListener("change", () => {
+        store.updateOsc(index as 0 | 1 | 2, { octave: parseInt(octaveSelect.value) });
+    });
+    octaveRow.appendChild(octaveSelect);
+    section.appendChild(octaveRow);
+
+    // Ring modulation toggle (only OSC3)
+    if (index === 2) {
+        const ringRow = document.createElement("div");
+        ringRow.className = "row";
+        const ringLabel = document.createElement("label");
+        ringLabel.textContent = "Mod. anillo";
+        ringRow.appendChild(ringLabel);
+        const ringCheck = document.createElement("input");
+        ringCheck.type = "checkbox";
+        ringCheck.checked = store.params.osc[index].ringMod;
+        ringCheck.addEventListener("change", () => {
+            store.updateOsc(2, { ringMod: ringCheck.checked });
+        });
+        ringRow.appendChild(ringCheck);
+        section.appendChild(ringRow);
+    }
+
     // Volume slider
     const volRow = document.createElement("div");
     volRow.className = "row";
@@ -98,6 +135,30 @@ function buildADSRSection(store: SynthStore): HTMLDivElement {
     const h3 = document.createElement("h3");
     h3.textContent = "Envolvente ADSR";
     section.appendChild(h3);
+
+    // Spread slider
+    const spreadRow = document.createElement("div");
+    spreadRow.className = "row";
+    spreadRow.style.marginBottom = "0.6rem";
+    const spreadLabel = document.createElement("label");
+    spreadLabel.textContent = "Spread (¢)";
+    spreadRow.appendChild(spreadLabel);
+    const spreadSlider = document.createElement("input");
+    spreadSlider.type = "range";
+    spreadSlider.min = "0";
+    spreadSlider.max = "50";
+    spreadSlider.step = "1";
+    spreadSlider.value = String(store.params.spread);
+    const spreadSpan = document.createElement("span");
+    spreadSpan.textContent = store.params.spread + "¢";
+    spreadSlider.addEventListener("input", () => {
+        const val = parseFloat(spreadSlider.value);
+        spreadSpan.textContent = val + "¢";
+        store.updateSpread(val);
+    });
+    spreadRow.appendChild(spreadSlider);
+    spreadRow.appendChild(spreadSpan);
+    section.appendChild(spreadRow);
 
     const sliders = document.createElement("div");
     sliders.className = "adsr-sliders";

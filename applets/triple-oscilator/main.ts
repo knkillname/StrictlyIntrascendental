@@ -5,6 +5,7 @@ import { Keyboard } from "./keyboard-dom.js";
 import { setupQwerty } from "./qwerty-input.js";
 import { buildControls } from "./controls-ui.js";
 import { setupADSRDisplay } from "./adsr-display.js";
+import type { ADSRDisplayAPI } from "./adsr-display.js";
 
 const CSS = [
     "* { box-sizing: border-box; margin: 0; padding: 0; }",
@@ -56,15 +57,15 @@ const init: AppletInit = (canvas: HTMLCanvasElement) => {
 
     const adsrCanvasContainer = document.getElementById("adsr-canvas-container")!;
     adsrCanvasContainer.appendChild(canvas);
-    setupADSRDisplay(canvas, store);
+    const adsrDisplay: ADSRDisplayAPI = setupADSRDisplay(canvas, store);
 
     const mouseVoices = new Map<number, Voice>();
     const keyboardVoices = new Map<string, Voice>();
 
-    function startVoice(midi: number): Voice {
+    function startVoice(midi: number, velocity = 1): Voice {
         audio.ensureContext();
         const freq = midiToFrequency(midi);
-        return audio.createVoice(freq, store.params, audio.currentTime);
+        return audio.createVoice(freq, store.params, audio.currentTime, velocity);
     }
 
     function stopVoice(voice: Voice): void {
@@ -77,9 +78,10 @@ const init: AppletInit = (canvas: HTMLCanvasElement) => {
     });
 
     const keyboard = new Keyboard(container, {
-        onNoteOn(pointerId, _midi, _element) {
-            const voice = startVoice(_midi);
+        onNoteOn(pointerId, _midi, _element, velocity) {
+            const voice = startVoice(_midi, velocity);
             mouseVoices.set(pointerId, voice);
+            adsrDisplay.noteOn();
         },
         onNoteOff(pointerId, _midi, _element) {
             const voice = mouseVoices.get(pointerId);
@@ -87,6 +89,7 @@ const init: AppletInit = (canvas: HTMLCanvasElement) => {
                 stopVoice(voice);
                 mouseVoices.delete(pointerId);
             }
+            adsrDisplay.noteOff();
         },
     });
 
@@ -105,8 +108,9 @@ const init: AppletInit = (canvas: HTMLCanvasElement) => {
                 qwertyActivated = true;
                 status.style.display = "none";
             }
-            const voice = startVoice(midi);
+            const voice = startVoice(midi, 0.8);
             keyboardVoices.set(code, voice);
+            adsrDisplay.noteOn();
         },
         onNoteOff(code, _midi) {
             const voice = keyboardVoices.get(code);
@@ -114,6 +118,7 @@ const init: AppletInit = (canvas: HTMLCanvasElement) => {
                 stopVoice(voice);
                 keyboardVoices.delete(code);
             }
+            adsrDisplay.noteOff();
         },
     });
 };
