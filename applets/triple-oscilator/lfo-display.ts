@@ -3,9 +3,9 @@ import type { SynthStore } from "./state.js";
 
 function lfoSample(waveform: string, t: number): number {
     switch (waveform) {
-        case "sine":     return Math.sin(t * 2 * Math.PI);
+        case "sine": return Math.sin(t * 2 * Math.PI);
         case "triangle": return 1 - 4 * Math.abs(t - 0.5);
-        case "square":   return t < 0.5 ? 1 : -1;
+        case "square": return t < 0.5 ? 1 : -1;
         case "sawtooth": return 1 - 2 * t;
     }
     return 0;

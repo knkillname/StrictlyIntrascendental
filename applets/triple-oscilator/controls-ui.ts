@@ -235,10 +235,12 @@ function buildLFOSection(store: SynthStore): HTMLDivElement {
     // LFO waveform mini-display
     const lfoCanvas = document.createElement("canvas");
     lfoCanvas.id = "lfo-canvas";
-    lfoCanvas.width = 140;
-    lfoCanvas.height = 34;
+    lfoCanvas.width = 280;
+    lfoCanvas.height = 68;
     lfoCanvas.style.display = "block";
-    lfoCanvas.style.margin = "0.3rem auto 0";
+    lfoCanvas.style.width = "100%";
+    lfoCanvas.style.height = "34px";
+    lfoCanvas.style.marginTop = "0.3rem";
     lfoCanvas.style.background = "#0a1119";
     lfoCanvas.style.borderRadius = "3px";
     section.appendChild(lfoCanvas);
