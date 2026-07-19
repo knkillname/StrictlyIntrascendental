@@ -107,9 +107,9 @@ export function setupADSRDisplay(
                 return;
             }
             const gain = releaseGain * (1 - re / (adsr.release || 0.001));
-            const releaseStart = adsr.attack + adsr.decay + adsr.sustainTime;
-            const elapsed = releaseStart + Math.min(re, adsr.release);
-            drawCursor(elapsed, Math.max(0, gain), adsr);
+            const holdMs = releaseMs - startMs;
+            const actualElapsed = (holdMs / 1000) + Math.min(re, adsr.release);
+            drawCursor(actualElapsed, Math.max(0, gain), adsr);
             requestAnimationFrame(tick);
         }
     }
