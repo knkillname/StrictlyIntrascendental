@@ -1,4 +1,4 @@
-import type { SynthParams, OscillatorConfig, ADSRConfig } from "./types.js";
+import type { SynthParams, OscillatorConfig, ADSRConfig, LFOConfig } from "./types.js";
 
 const DEFAULTS: SynthParams = {
     osc: [
@@ -14,6 +14,12 @@ const DEFAULTS: SynthParams = {
         release: 0.5,
     },
     spread: 0,
+    lfo: {
+        rate: 5,
+        depth: 0.1,
+        waveform: "sine",
+        target: "vibrato",
+    },
 };
 
 function cloneParams(p: SynthParams): SynthParams {
@@ -25,6 +31,7 @@ function cloneParams(p: SynthParams): SynthParams {
         ],
         adsr: { ...p.adsr },
         spread: p.spread,
+        lfo: { ...p.lfo },
     };
 }
 
@@ -55,6 +62,11 @@ export class SynthStore {
 
     updateSpread(value: number): void {
         this.params.spread = value;
+        this.notify();
+    }
+
+    updateLFO(partial: Partial<LFOConfig>): void {
+        this.params.lfo = { ...this.params.lfo, ...partial };
         this.notify();
     }
 

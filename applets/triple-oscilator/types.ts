@@ -1,4 +1,6 @@
 export type Waveform = "sine" | "square" | "sawtooth" | "triangle" | "noise";
+export type LFOWaveform = "sine" | "triangle" | "square" | "sawtooth";
+export type LFOTarget = "off" | "vibrato" | "tremolo";
 
 export interface OscillatorConfig {
     type: Waveform;
@@ -16,10 +18,18 @@ export interface ADSRConfig {
     release: number;
 }
 
+export interface LFOConfig {
+    rate: number;
+    depth: number;
+    waveform: LFOWaveform;
+    target: LFOTarget;
+}
+
 export interface SynthParams {
     osc: [OscillatorConfig, OscillatorConfig, OscillatorConfig];
     adsr: ADSRConfig;
     spread: number;
+    lfo: LFOConfig;
 }
 
 export function envelopeGainAt(elapsed: number, a: ADSRConfig): number {

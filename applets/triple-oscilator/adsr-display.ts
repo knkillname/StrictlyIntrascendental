@@ -1,4 +1,4 @@
-import type { ADSRConfig } from "./types.js";
+import type { ADSRConfig, LFOWaveform, LFOConfig } from "./types.js";
 import { envelopeGainAt } from "./types.js";
 import type { SynthStore } from "./state.js";
 
@@ -106,6 +106,40 @@ export function setupADSRDisplay(
         ctx.shadowBlur = 0;
     }
 
+    function lfoSample(waveform: LFOWaveform, t: number): number {
+        switch (waveform) {
+            case "sine": return Math.sin(t * 2 * Math.PI);
+            case "triangle": return 1 - 4 * Math.abs(t - 0.5);
+            case "square": return t < 0.5 ? 1 : -1;
+            case "sawtooth": return 1 - 2 * t;
+        }
+    }
+
+    function drawLFOWaveform(cfg: LFOConfig): void {
+        const rx = w - 72, ry = h - 38;
+        const rw = 62, rh = 28;
+        const phase = (performance.now() / 1000 * cfg.rate) % 1;
+
+        ctx.fillStyle = "#0a1119";
+        ctx.fillRect(rx, ry, rw, rh);
+
+        ctx.strokeStyle = "#ffda79";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i <= 30; i++) {
+            const t = i / 30;
+            const val = lfoSample(cfg.waveform, (t + phase) % 1);
+            const x = rx + t * rw;
+            const y = ry + rh / 2 - val * (rh / 2 - 2);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    }
+
+    function isLFOActive(): boolean {
+        return store.params.lfo.target !== "off";
+    }
+
     function tick(): void {
         resize();
         if (w === 0 || h === 0) { requestAnimationFrame(tick); return; }
@@ -126,6 +160,11 @@ export function setupADSRDisplay(
             drawCursor(pos.x, pos.y);
         }
 
+        if (isLFOActive()) {
+            drawLFOWaveform(store.params.lfo);
+            anyAlive = true;
+        }
+
         if (anyAlive) {
             requestAnimationFrame(tick);
         } else {
@@ -134,27 +173,27 @@ export function setupADSRDisplay(
     }
 
     store.onChange((params) => {
-        if (notes.size > 0) {
+        if (notes.size > 0 || isLFOActive()) {
             if (!animating) { animating = true; requestAnimationFrame(tick); }
         } else {
             drawCurve(params.adsr);
         }
     });
 
-    requestAnimationFrame(() => drawCurve(store.params.adsr));
+requestAnimationFrame(() => drawCurve(store.params.adsr));
 
-    return {
-        noteOn(): number {
-            const id = nextId++;
-            notes.set(id, { startMs: performance.now(), released: false, releaseMs: 0 });
-            if (!animating) { animating = true; requestAnimationFrame(tick); }
-            return id;
-        },
-        noteOff(id: number): void {
-            const note = notes.get(id);
-            if (!note || note.released) return;
-            note.released = true;
-            note.releaseMs = performance.now();
-        },
-    };
+return {
+    noteOn(): number {
+        const id = nextId++;
+        notes.set(id, { startMs: performance.now(), released: false, releaseMs: 0 });
+        if (!animating) { animating = true; requestAnimationFrame(tick); }
+        return id;
+    },
+    noteOff(id: number): void {
+        const note = notes.get(id);
+        if (!note || note.released) return;
+        note.released = true;
+        note.releaseMs = performance.now();
+    },
+};
 }

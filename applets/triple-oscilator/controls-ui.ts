@@ -8,6 +8,7 @@ export function buildControls(container: HTMLElement, store: SynthStore): HTMLDi
         wrapper.appendChild(buildOscSection(i, store));
     }
 
+    wrapper.appendChild(buildLFOSection(store));
     wrapper.appendChild(buildADSRSection(store));
     container.appendChild(wrapper);
     return wrapper;
@@ -124,6 +125,112 @@ function buildOscSection(index: number, store: SynthStore): HTMLDivElement {
     volRow.appendChild(volSlider);
     volRow.appendChild(volSpan);
     section.appendChild(volRow);
+
+    return section;
+}
+
+function buildLFOSection(store: SynthStore): HTMLDivElement {
+    const section = document.createElement("div");
+    section.className = "osc-section";
+    section.style.flex = "1 1 140px";
+
+    const h3 = document.createElement("h3");
+    h3.textContent = "LFO";
+    section.appendChild(h3);
+
+    // Waveform
+    const waveRow = document.createElement("div");
+    waveRow.className = "row";
+    const waveLabel = document.createElement("label");
+    waveLabel.textContent = "Forma";
+    waveRow.appendChild(waveLabel);
+    const waveSelect = document.createElement("select");
+    const lfoWaves = ["sine", "triangle", "square", "sawtooth"];
+    const lfoLabels: Record<string, string> = {
+        sine: "Senoidal", triangle: "Triangular", square: "Cuadrada", sawtooth: "Sierra",
+    };
+    for (const w of lfoWaves) {
+        const opt = document.createElement("option");
+        opt.value = w;
+        opt.textContent = lfoLabels[w];
+        if (w === store.params.lfo.waveform) opt.selected = true;
+        waveSelect.appendChild(opt);
+    }
+    waveSelect.addEventListener("change", () => {
+        store.updateLFO({ waveform: waveSelect.value as any });
+    });
+    waveRow.appendChild(waveSelect);
+    section.appendChild(waveRow);
+
+    // Rate slider
+    const rateRow = document.createElement("div");
+    rateRow.className = "row";
+    const rateLabel = document.createElement("label");
+    rateLabel.textContent = "Rate (Hz)";
+    rateRow.appendChild(rateLabel);
+    const rateSlider = document.createElement("input");
+    rateSlider.type = "range";
+    rateSlider.min = "0.1";
+    rateSlider.max = "20";
+    rateSlider.step = "0.1";
+    rateSlider.value = String(store.params.lfo.rate);
+    const rateSpan = document.createElement("span");
+    rateSpan.textContent = store.params.lfo.rate.toFixed(1) + " Hz";
+    rateSlider.addEventListener("input", () => {
+        const val = parseFloat(rateSlider.value);
+        rateSpan.textContent = val.toFixed(1) + " Hz";
+        store.updateLFO({ rate: val });
+    });
+    rateRow.appendChild(rateSlider);
+    rateRow.appendChild(rateSpan);
+    section.appendChild(rateRow);
+
+    // Depth slider
+    const depthRow = document.createElement("div");
+    depthRow.className = "row";
+    const depthLabel = document.createElement("label");
+    depthLabel.textContent = "Depth (%)";
+    depthRow.appendChild(depthLabel);
+    const depthSlider = document.createElement("input");
+    depthSlider.type = "range";
+    depthSlider.min = "0";
+    depthSlider.max = "100";
+    depthSlider.step = "1";
+    depthSlider.value = String(Math.round(store.params.lfo.depth * 100));
+    const depthSpan = document.createElement("span");
+    depthSpan.textContent = Math.round(store.params.lfo.depth * 100) + "%";
+    depthSlider.addEventListener("input", () => {
+        const val = parseFloat(depthSlider.value) / 100;
+        depthSpan.textContent = Math.round(val * 100) + "%";
+        store.updateLFO({ depth: val });
+    });
+    depthRow.appendChild(depthSlider);
+    depthRow.appendChild(depthSpan);
+    section.appendChild(depthRow);
+
+    // Target
+    const targetRow = document.createElement("div");
+    targetRow.className = "row";
+    const targetLabel = document.createElement("label");
+    targetLabel.textContent = "Destino";
+    targetRow.appendChild(targetLabel);
+    const targetSelect = document.createElement("select");
+    const targets = ["off", "vibrato", "tremolo"];
+    const targetLabels: Record<string, string> = {
+        off: "Off", vibrato: "Vibrato", tremolo: "Trémolo",
+    };
+    for (const t of targets) {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = targetLabels[t];
+        if (t === store.params.lfo.target) opt.selected = true;
+        targetSelect.appendChild(opt);
+    }
+    targetSelect.addEventListener("change", () => {
+        store.updateLFO({ target: targetSelect.value as any });
+    });
+    targetRow.appendChild(targetSelect);
+    section.appendChild(targetRow);
 
     return section;
 }

@@ -18,6 +18,9 @@ export class Voice {
     private ctx: AudioContext;
     private releaseSec: number;
     private ringMod = false;
+    private lfoOsc: OscillatorNode | null = null;
+    private lfoGain: GainNode | null = null;
+    private tremoloGain: GainNode | null = null;
 
     constructor(
         ctx: AudioContext,
@@ -91,6 +94,33 @@ export class Voice {
         gain.linearRampToValueAtTime(a.sustainLevel * velocity, decayEnd);
         gain.setValueAtTime(a.sustainLevel * velocity, sustainEnd);
         gain.linearRampToValueAtTime(0, sustainEnd + a.release);
+
+        // LFO setup
+        const lfo = params.lfo;
+        if (lfo.target !== "off") {
+            this.lfoOsc = ctx.createOscillator();
+            this.lfoOsc.type = lfo.waveform;
+            this.lfoOsc.frequency.value = lfo.rate;
+            this.lfoGain = ctx.createGain();
+            this.lfoOsc.connect(this.lfoGain);
+
+            if (lfo.target === "vibrato") {
+                this.lfoGain.gain.value = lfo.depth * 50;
+                for (const s of this.sources) {
+                    if (!s.isNoise) this.lfoGain.connect((s.node as OscillatorNode).detune);
+                }
+            } else if (lfo.target === "tremolo") {
+                this.lfoGain.gain.value = lfo.depth;
+                this.tremoloGain = ctx.createGain();
+                this.tremoloGain.gain.value = 1;
+                this.envGain.disconnect();
+                this.envGain.connect(this.tremoloGain);
+                this.tremoloGain.connect(masterGain);
+                this.lfoGain.connect(this.tremoloGain.gain);
+            }
+
+            this.lfoOsc.start(startTime);
+        }
     }
 
     release(stopTime?: number): void {
@@ -125,6 +155,14 @@ export class Voice {
                 osc.detune.setValueAtTime(cfg.detune + spreadOffset, now);
             }
         }
+        if (this.lfoOsc) {
+            this.lfoOsc.type = params.lfo.waveform;
+            this.lfoOsc.frequency.value = params.lfo.rate;
+            if (this.lfoGain) {
+                this.lfoGain.gain.value =
+                    params.lfo.target === "vibrato" ? params.lfo.depth * 50 : params.lfo.depth;
+            }
+        }
     }
 
     disconnect(): void {
@@ -133,6 +171,9 @@ export class Voice {
             s.gainNode.disconnect();
             if (s.ringGain) s.ringGain.disconnect();
         }
+        if (this.lfoOsc) this.lfoOsc.disconnect();
+        if (this.lfoGain) this.lfoGain.disconnect();
+        if (this.tremoloGain) this.tremoloGain.disconnect();
         this.envGain.disconnect();
     }
 }
