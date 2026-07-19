@@ -4,6 +4,38 @@ export function midiToFrequency(midi: number): number {
     return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
+function gaussianRand(): number {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function generateRandomWalkBuffer(ctx: AudioContext): AudioBuffer {
+    const N = 512;
+    const half = N / 2;
+    const walk = new Float32Array(N);
+    for (let i = 1; i < N; i++) walk[i] = walk[i - 1] + gaussianRand();
+
+    const faded = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+        faded[i] = i < half
+            ? walk[i] * (i / (half - 1))
+            : walk[i] * (1 - (i - half) / (half - 1));
+    }
+
+    const buf = ctx.createBuffer(1, half, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    let peak = 0;
+    for (let i = 0; i < half; i++) {
+        const sum = faded[i] + faded[i + half];
+        data[i] = sum;
+        if (Math.abs(sum) > peak) peak = Math.abs(sum);
+    }
+    if (peak > 0) for (let i = 0; i < half; i++) data[i] /= peak;
+    return buf;
+}
+
 interface SourceEntry {
     node: OscillatorNode | AudioBufferSourceNode;
     gainNode: GainNode;
@@ -28,6 +60,7 @@ export class Voice {
         params: SynthParams,
         startTime: number,
         noiseBuffer: AudioBuffer,
+        randomWalkBuffer: AudioBuffer,
         masterGain: GainNode,
         velocity: number,
     ) {
@@ -53,6 +86,14 @@ export class Voice {
                 noise.start(startTime);
                 gainNode.connect(this.envGain);
                 this.sources.push({ node: noise, gainNode, isNoise: true, index: i });
+            } else if (cfg.type === "randomwalk") {
+                const rw = ctx.createBufferSource();
+                rw.buffer = randomWalkBuffer;
+                rw.loop = true;
+                rw.connect(gainNode);
+                rw.start(startTime);
+                gainNode.connect(this.envGain);
+                this.sources.push({ node: rw, gainNode, isNoise: true, index: i });
             } else {
                 const osc = ctx.createOscillator();
                 osc.type = cfg.type;
@@ -182,6 +223,7 @@ export class AudioEngine {
     private ctx: AudioContext | null = null;
     private masterGain: GainNode | null = null;
     private noiseBuffer: AudioBuffer | null = null;
+    private randomWalkBuffer: AudioBuffer | null = null;
 
     ensureContext(): void {
         if (!this.ctx) {
@@ -195,6 +237,7 @@ export class AudioEngine {
             for (let i = 0; i < data.length; i++) {
                 data[i] = Math.random() * 2 - 1;
             }
+            this.randomWalkBuffer = generateRandomWalkBuffer(this.ctx);
         }
         if (this.ctx.state === "suspended") {
             void this.ctx.resume();
@@ -202,10 +245,10 @@ export class AudioEngine {
     }
 
     createVoice(freq: number, params: SynthParams, startTime: number, velocity = 1): Voice {
-        if (!this.ctx || !this.masterGain || !this.noiseBuffer) {
+        if (!this.ctx || !this.masterGain || !this.noiseBuffer || !this.randomWalkBuffer) {
             throw new Error("AudioEngine not initialized");
         }
-        return new Voice(this.ctx, freq, params, startTime, this.noiseBuffer, this.masterGain, velocity);
+        return new Voice(this.ctx, freq, params, startTime, this.noiseBuffer, this.randomWalkBuffer, this.masterGain, velocity);
     }
 
     get currentTime(): number {

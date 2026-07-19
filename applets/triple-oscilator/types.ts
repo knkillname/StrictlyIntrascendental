@@ -1,4 +1,4 @@
-export type Waveform = "sine" | "square" | "sawtooth" | "triangle" | "noise";
+export type Waveform = "sine" | "square" | "sawtooth" | "triangle" | "noise" | "randomwalk";
 export type LFOWaveform = "sine" | "triangle" | "square" | "sawtooth";
 export type LFOTarget = "off" | "vibrato" | "tremolo";
 

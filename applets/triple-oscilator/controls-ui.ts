@@ -29,10 +29,10 @@ function buildOscSection(index: number, store: SynthStore): HTMLDivElement {
     waveLabel.textContent = "Forma de onda";
     waveRow.appendChild(waveLabel);
     const waveSelect = document.createElement("select");
-    const waveforms = ["sine", "square", "sawtooth", "triangle", "noise"];
+    const waveforms = ["sine", "square", "sawtooth", "triangle", "noise", "randomwalk"];
     const waveLabels: Record<string, string> = {
         sine: "Senoidal", square: "Cuadrada", sawtooth: "Sierra",
-        triangle: "Triangular", noise: "Ruido blanco",
+        triangle: "Triangular", noise: "Ruido blanco", randomwalk: "Caminata aleat.",
     };
     for (const w of waveforms) {
         const opt = document.createElement("option");
